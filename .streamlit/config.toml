@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#2E86AB"  # clean modern blue
+backgroundColor = "#F4F4F9"  # very light grey
+secondaryBackgroundColor = "#FFFFFF"  # white cards
+textColor = "#1C1C1E"  # deep grey-black
+font = "sans serif"
