@@ -65,14 +65,29 @@ st.header("📈 Progress Charts")
 if not df.empty:
     selected_exercise = st.selectbox("Choose exercise to visualize:", df["exercise"].unique())
 
-    # Filter data
-    exercise_df = df[df["exercise"] == selected_exercise].sort_values("timestamp")
-    # Convert and strip time
-    exercise_df["date"] = pd.to_datetime(exercise_df["timestamp"]).dt.date
+    # Filter and sort data for the selected exercise
+    exercise_df = df[df["exercise"] == selected_exercise].copy()
+    exercise_df = exercise_df.sort_values("timestamp")
 
-    # Line chart for weight over time
-    fig = px.line(exercise_df, x="date", y="weight",
-                  markers=True, title=f"Weight Progress: {selected_exercise}")
+    # Convert timestamp to clean date string
+    exercise_df["date_str"] = pd.to_datetime(exercise_df["timestamp"]).dt.strftime('%Y-%m-%d')
+
+    # Create the line chart
+    fig = px.line(
+        exercise_df,
+        x="date_str",
+        y="weight",
+        markers=True,
+        title=f"Weight Progress: {selected_exercise}"
+    )
+
+    # Force x-axis to treat dates as plain category labels
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Weight (kg)",
+        xaxis=dict(type="category")
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 else:
     st.info("Log some workouts to see charts!")
