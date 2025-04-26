@@ -119,6 +119,26 @@ response = supabase.table("workouts_v2") \
 
 df = pd.DataFrame(response.data)
 
+# Get list of previous exercises
+previous_exercises = df["exercise"].unique().tolist() if not df.empty else []
+
+# Initialize session state if missing
+for field in ["exercise_input_real", "weight_input", "reps_input", "sets_input", "just_logged_workout"]:
+    if field not in st.session_state:
+        if field == "weight_input":
+            st.session_state[field] = 0.0
+        elif field in ["reps_input", "sets_input"]:
+            st.session_state[field] = 1
+        else:
+            st.session_state[field] = ""
+
+# 🔥 Reset fields if workout just logged
+if st.session_state.just_logged_workout:
+    st.session_state.exercise_input = ""
+    st.session_state.weight_input = 0.0
+    st.session_state.reps_input = 1
+    st.session_state.sets_input = 1
+    st.session_state.just_logged_workout = False
 # Input form
 if page == "🏋️ Log Workout":
     st.header("🏋️ Log a New Workout")
@@ -127,31 +147,63 @@ if page == "🏋️ Log Workout":
         col1, col2 = st.columns(2)
 
         with col1:
-            exercise = st.text_input("Exercise Name", placeholder="e.g., Bench Press")
+            if previous_exercises:
+                st.caption("💡 Existing exercises:")
+                chosen = st.selectbox(
+                    "Pick previous (optional)",
+                    [""] + previous_exercises,
+                    key="previous_exercise"
+                )
+
+            # Typing input (always open)
+            exercise = st.text_input(
+                "Exercise Name",
+                value=st.session_state.exercise_input_real,
+                key="exercise_input_real"
+            )
 
         with col2:
-            weight = st.number_input("Weight (kg)", min_value=0.0, step=0.5)
+            weight = st.number_input(
+                "Weight (kg)",
+                min_value=0.0,
+                step=0.5,
+                key="weight_input"  # 🔥 This connects it
+            )
 
-        reps = st.number_input("Reps", min_value=1, step=1)
-        sets = st.number_input("Sets", min_value=1, step=1)
+        reps = st.number_input("Reps", min_value=1, step=1, key="reps_input")
+        sets = st.number_input("Sets", min_value=1, step=1, key="sets_input")
 
         submit = st.form_submit_button("Log Workout")
 
         if submit:
             try:
+                # Final exercise logic
+                final_exercise = st.session_state.exercise_input_real.strip()
+
+                # If the user picked from dropdown and didn't type, use that
+                if not final_exercise and chosen:
+                    final_exercise = chosen.strip()
+
+                if not final_exercise:
+                    st.warning("⚠️ Please enter or pick an exercise name!")
+                    st.stop()
+
                 response = supabase.table("workouts_v2").insert({
                     "user": current_user,
-                    "exercise": exercise,
-                    "weight": weight,
-                    "reps": reps,
-                    "sets": sets,
+                    "exercise": final_exercise,
+                    "weight": st.session_state.weight_input,
+                    "reps": st.session_state.reps_input,
+                    "sets": st.session_state.sets_input,
                     "date": datetime.today().date().isoformat()
                 }).execute()
 
                 st.success(f"✅ Workout logged for {current_user}!")
+
+                st.session_state.just_logged_workout = True
+                st.rerun()
+
             except Exception as e:
                 st.error(f"❌ Failed to log workout: {e}")
-
 # Workout Stats
 elif page == "📊 Workout Stats":
     if not df.empty :
