@@ -119,18 +119,28 @@ response = supabase.table("workouts_v2") \
 
 df = pd.DataFrame(response.data)
 
+# 🔥 Drop 'id' column if it exists
+if "id" in df.columns:
+    df = df.drop(columns=["id"])
+
 # Get list of previous exercises
 previous_exercises = df["exercise"].unique().tolist() if not df.empty else []
 
-# Initialize session state if missing
-for field in ["exercise_input_real", "weight_input", "reps_input", "sets_input", "just_logged_workout"]:
-    if field not in st.session_state:
-        if field == "weight_input":
-            st.session_state[field] = 0.0
-        elif field in ["reps_input", "sets_input"]:
-            st.session_state[field] = 1
-        else:
-            st.session_state[field] = ""
+# Initialize session state for form inputs if not already set
+if "exercise_input" not in st.session_state:
+    st.session_state.exercise_input = ""
+
+if "weight_input" not in st.session_state:
+    st.session_state.weight_input = 0.0
+
+if "reps_input" not in st.session_state:
+    st.session_state.reps_input = 1
+
+if "sets_input" not in st.session_state:
+    st.session_state.sets_input = 1
+
+if "just_logged_workout" not in st.session_state:
+    st.session_state.just_logged_workout = False
 
 # 🔥 Reset fields if workout just logged
 if st.session_state.just_logged_workout:
@@ -147,18 +157,22 @@ if page == "🏋️ Log Workout":
         col1, col2 = st.columns(2)
 
         with col1:
+            # Show suggestions manually (fake combobox)
             if previous_exercises:
-                st.caption("💡 Existing exercises:")
+                st.caption("💡 Existing exercises (click to copy):")
                 chosen = st.selectbox(
-                    "Pick previous (optional)",
+                    "Pick from previous exercises or input a new exercise",
                     [""] + previous_exercises,
                     key="previous_exercise"
                 )
 
-            # Typing input (always open)
+                if chosen:
+                    st.session_state.exercise_input = chosen
+
+            # Now actual typing input
             exercise = st.text_input(
                 "Exercise Name",
-                value=st.session_state.exercise_input_real,
+                value=st.session_state.exercise_input,
                 key="exercise_input_real"
             )
 
@@ -177,15 +191,10 @@ if page == "🏋️ Log Workout":
 
         if submit:
             try:
-                # Final exercise logic
-                final_exercise = st.session_state.exercise_input_real.strip()
-
-                # If the user picked from dropdown and didn't type, use that
-                if not final_exercise and chosen:
-                    final_exercise = chosen.strip()
+                final_exercise = exercise.strip()
 
                 if not final_exercise:
-                    st.warning("⚠️ Please enter or pick an exercise name!")
+                    st.warning("⚠️ Please enter a valid exercise name!")
                     st.stop()
 
                 response = supabase.table("workouts_v2").insert({
@@ -199,6 +208,12 @@ if page == "🏋️ Log Workout":
 
                 st.success(f"✅ Workout logged for {current_user}!")
 
+                st.session_state.exercise_input = ""
+                st.session_state.exercise_input_real = ""
+                st.session_state.previous_exercise = ""
+                st.session_state.weight_input = 0.0
+                st.session_state.reps_input = 1
+                st.session_state.sets_input = 1
                 st.session_state.just_logged_workout = True
                 st.rerun()
 
