@@ -154,12 +154,12 @@ if page == "🏋️ Log Workout":
     st.header("🏋️ Log a New Workout")
     # Your workout logging form here
     with st.form("log_workout"):
-        col1, col2 = st.columns(2)
+        # First row: Select exercise and Weight
+        col1, col2 = st.columns([2, 1])  # Wider select, smaller weight
 
         with col1:
-            # Show suggestions manually (fake combobox)
             if previous_exercises:
-                st.caption("💡 Existing exercises (click to copy):")
+                st.caption("💡 Existing exercises (select from box) or input a new one:")
                 chosen = st.selectbox(
                     "Pick from previous exercises or input a new exercise",
                     [""] + previous_exercises,
@@ -169,25 +169,41 @@ if page == "🏋️ Log Workout":
                 if chosen:
                     st.session_state.exercise_input = chosen
 
-            # Now actual typing input
-            exercise = st.text_input(
-                "Exercise Name",
-                value=st.session_state.exercise_input,
-                key="exercise_input_real"
-            )
-
         with col2:
+            # Compact weight input
+            st.markdown('<div style="padding-top: 36px; width: 120px;">', unsafe_allow_html=True)
             weight = st.number_input(
                 "Weight (kg)",
                 min_value=0.0,
                 step=0.5,
-                key="weight_input"  # 🔥 This connects it
+                key="weight_input"
             )
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        reps = st.number_input("Reps", min_value=1, step=1, key="reps_input")
-        sets = st.number_input("Sets", min_value=1, step=1, key="sets_input")
+        # Second row: Exercise name input
+        exercise = st.text_input(
+            "Exercise Name",
+            value=st.session_state.get("exercise_input", ""),
+            key="exercise_input_real"
+        )
 
-        submit = st.form_submit_button("Log Workout")
+        # Second row: Reps and Sets
+        col3, col4 = st.columns(2)
+        with col3:
+            reps = st.number_input("Reps", min_value=1, step=1, key="reps_input")
+        with col4:
+            sets = st.number_input("Sets", min_value=1, step=1, key="sets_input")
+
+        # Centered Log Workout button
+
+        # Create a container
+        button_container = st.container()
+
+        # Inside the container: center the button
+        with button_container:
+            centered_button = st.columns(5)  # Three columns
+            with centered_button[2]:  # Middle column
+                submit = st.form_submit_button("Log Workout")
 
         if submit:
             try:
