@@ -127,88 +127,59 @@ if "id" in df.columns:
 previous_exercises = df["exercise"].unique().tolist() if not df.empty else []
 
 # Initialize session state for form inputs if not already set
-if "exercise_input" not in st.session_state:
-    st.session_state.exercise_input = ""
-
-if "weight_input" not in st.session_state:
-    st.session_state.weight_input = 0.0
-
-if "reps_input" not in st.session_state:
-    st.session_state.reps_input = 1
-
-if "sets_input" not in st.session_state:
-    st.session_state.sets_input = 1
-
-if "just_logged_workout" not in st.session_state:
+if st.session_state.get("just_logged_workout"):
+    default_weight = 0.0
+    default_reps = 1
+    default_sets = 1
+    default_exercise = ""
     st.session_state.just_logged_workout = False
+else:
+    default_weight = st.session_state.get("weight_input", 0.0)
+    default_reps = st.session_state.get("reps_input", 1)
+    default_sets = st.session_state.get("sets_input", 1)
+    default_exercise = st.session_state.get("exercise_input_real", "")
 
-# 🔥 Reset fields if workout just logged
-if st.session_state.just_logged_workout:
-    st.session_state.exercise_input = ""
-    st.session_state.weight_input = 0.0
-    st.session_state.reps_input = 1
-    st.session_state.sets_input = 1
-    st.session_state.just_logged_workout = False
 # Input form
 if page == "🏋️ Log Workout":
     st.header("🏋️ Log a New Workout")
     # Your workout logging form here
     with st.form("log_workout"):
-        # First row: Select exercise and Weight
-        col1, col2 = st.columns([2, 1])  # Wider select, smaller weight
+        col1, col2 = st.columns([2, 1])
 
         with col1:
-            if previous_exercises:
-                st.caption("💡 Existing exercises (select from box) or input a new one:")
-                chosen = st.selectbox(
-                    "Pick from previous exercises or input a new exercise",
-                    [""] + previous_exercises,
-                    key="previous_exercise"
-                )
-
-                if chosen:
-                    st.session_state.exercise_input = chosen
-
-        with col2:
-            # Compact weight input
-            st.markdown('<div style="padding-top: 36px; width: 120px;">', unsafe_allow_html=True)
-            weight = st.number_input(
-                "Weight (kg)",
-                min_value=0.0,
-                step=0.5,
-                key="weight_input"
+            st.caption("💡 Existing exercises (select from box) or input a new one:")
+            chosen = st.selectbox(
+                "Pick from previous exercises or input a new exercise",
+                [""] + previous_exercises,
+                key="previous_exercise"
             )
-            st.markdown('</div>', unsafe_allow_html=True)
 
-        # Second row: Exercise name input
+        # Final default exercise logic
+        exercise_default = chosen if chosen else default_exercise
         exercise = st.text_input(
             "Exercise Name",
-            value=st.session_state.get("exercise_input", ""),
+            value=exercise_default,
             key="exercise_input_real"
         )
 
-        # Second row: Reps and Sets
+        with col2:
+            st.markdown('<div style="padding-top: 36px; width: 120px;">', unsafe_allow_html=True)
+            weight = st.number_input("Weight (kg)", min_value=0.0, step=0.5, value=default_weight, key="weight_input")
+            st.markdown('</div>', unsafe_allow_html=True)
+
         col3, col4 = st.columns(2)
         with col3:
-            reps = st.number_input("Reps", min_value=1, step=1, key="reps_input")
+            reps = st.number_input("Reps", min_value=1, step=1, value=default_reps, key="reps_input")
         with col4:
-            sets = st.number_input("Sets", min_value=1, step=1, key="sets_input")
+            sets = st.number_input("Sets", min_value=1, step=1, value=default_sets, key="sets_input")
 
-        # Centered Log Workout button
-
-        # Create a container
-        button_container = st.container()
-
-        # Inside the container: center the button
-        with button_container:
-            centered_button = st.columns(5)  # Three columns
-            with centered_button[2]:  # Middle column
-                submit = st.form_submit_button("Log Workout")
+        col5, col6, col7 = st.columns([4, 3, 4])
+        with col6:
+            submit = st.form_submit_button("Log Workout")
 
         if submit:
             try:
                 final_exercise = exercise.strip()
-
                 if not final_exercise:
                     st.warning("⚠️ Please enter a valid exercise name!")
                     st.stop()
@@ -224,12 +195,6 @@ if page == "🏋️ Log Workout":
 
                 st.success(f"✅ Workout logged for {current_user}!")
 
-                st.session_state.exercise_input = ""
-                st.session_state.exercise_input_real = ""
-                st.session_state.previous_exercise = ""
-                st.session_state.weight_input = 0.0
-                st.session_state.reps_input = 1
-                st.session_state.sets_input = 1
                 st.session_state.just_logged_workout = True
                 st.rerun()
 
